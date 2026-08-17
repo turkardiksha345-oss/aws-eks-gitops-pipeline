@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Doodle Quote</title>
+    <!-- Use Google Fonts for a hand-drawn/doodle feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="notebook-container">
+        <div class="paper">
+            <div class="lines"></div>
+            <div class="content">
+                <div class="doodle-decoration top-left">✨</div>
+                <div class="doodle-decoration top-right">💭</div>
+                
+                <h1 class="title">Today's Quote</h1>
+                
+                <div class="quote-box">
+                    <p class="quote-text">"{{ quote.text }}"</p>
+                    <p class="quote-author">- {{ quote.author }}</p>
+                </div>
+                
+                <div class="doodle-decoration bottom-left">✏️</div>
+                <div class="doodle-decoration bottom-right">🌟</div>
+            </div>
+            
+            <form action="/" method="GET" class="refresh-form">
+                <button type="submit" class="doodle-button">Draw Another One! 🎨</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

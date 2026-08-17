@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-eks-gitops-pipeline
+  namespace: argocd
+  # Add finalizer to allow Argo CD to cascade delete resources
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # Replace with the actual repository URL once created
+    repoURL: 'https://github.com/turkardiksha345-oss/aws-eks-gitops-pipeline.git'
+    targetRevision: HEAD
+    path: chart
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: hello-world-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
