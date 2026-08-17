@@ -48,7 +48,7 @@ terraform apply -auto-approve
 Once applied, Terraform will output:
 ```bash
 # Connect kubectl to your new EKS cluster
-aws eks update-kubeconfig --region us-east-1 --name magnite-eks-cluster
+aws eks update-kubeconfig --region eu-north-1 --name eks-cluster
 
 # View DNS validation records for your ACM SSL Certificate
 terraform output acm_dns_validation_records

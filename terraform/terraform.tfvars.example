@@ -1,16 +1,16 @@
 # AWS Region
-aws_region = "us-east-1"
+aws_region = "eu-north-1"
 
 # EKS Configuration
-cluster_name        = "magnite-eks-cluster"
+cluster_name        = "eks-cluster"
 nodegroup_name      = "standard-workers"
 node_instance_types = ["t3.medium"]
 desired_nodes       = 2
-min_nodes           = 1
+min_nodes           = 2
 max_nodes           = 4
 
 # ECR Configuration
-ecr_repo_name = "aws-eks-gitops-pipeline"
+ecr_repo_name = "eks-cluster-app"
 
 # Domain Configuration
 domain_name = "cdec-engineer.store"

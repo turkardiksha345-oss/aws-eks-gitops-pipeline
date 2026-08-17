@@ -173,14 +173,14 @@ aws-eks-gitops-pipeline/
 
 | Deliverable | Location in Repository | Status |
 | :--- | :--- | :---: |
-| **Python Sample Application** | [`app/main.py`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/app/main.py) | ✅ Completed |
+| **Python Sample Application** | [`app/main.py`](app/main.py) | ✅ Completed |
 | **Source Code Repository** | GitHub / GitLab repository | ✅ Completed |
-| **CI/CD & DevSecOps Pipeline** | [`.github/workflows/ci.yml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/.github/workflows/ci.yml) | ✅ Completed |
-| **ArgoCD GitOps Manifests** | [`argocd/application.yaml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/argocd/application.yaml), [`argocd/argocd-ingress.yaml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/argocd/argocd-ingress.yaml) | ✅ Completed |
-| **Kubernetes Helm Charts** | [`chart/`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/chart) (Deployment, Service, Ingress, HPA) | ✅ Completed |
+| **CI/CD & DevSecOps Pipeline** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | ✅ Completed |
+| **ArgoCD GitOps Manifests** | [`argocd/application.yaml`](argocd/application.yaml), [`argocd/argocd-ingress.yaml`](argocd/argocd-ingress.yaml) | ✅ Completed |
+| **Kubernetes Helm Charts** | [`chart/`](chart/) (Deployment, Service, Ingress, HPA) | ✅ Completed |
 | **SSL/TLS Configuration** | AWS ACM + Ingress annotations (`cdec-engineer.store`) | ✅ Completed |
-| **Architecture Documentation** | [`docs/architecture.md`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/docs/architecture.md) | ✅ Completed |
-| **Operational & Rollback Runbook**| [`docs/operations.md`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/docs/operations.md) | ✅ Completed |
+| **Architecture Documentation** | [`docs/architecture.md`](docs/architecture.md) | ✅ Completed |
+| **Operational & Rollback Runbook**| [`docs/operations.md`](docs/operations.md) | ✅ Completed |
 | **Cost Optimization Plan** | Scale-to-Zero & ASG Suspension guide | ✅ Completed |
 
 ---
@@ -205,30 +205,30 @@ If you haven't created an EKS cluster yet, you can create one using `eksctl`:
 ```bash
 # Create EKS Cluster
 eksctl create cluster \
-  --name magnite-eks-cluster \
-  --region us-east-1 \
+  --name eks-cluster \
+  --region eu-north-1 \
   --nodegroup-name standard-workers \
   --node-type t3.medium \
   --nodes 2 \
-  --nodes-min 1 \
+  --nodes-min 2 \
   --nodes-max 4 \
   --managed
 
 # Connect kubectl to cluster
-aws eks update-kubeconfig --region us-east-1 --name magnite-eks-cluster
+aws eks update-kubeconfig --region eu-north-1 --name eks-cluster
 ```
 
 #### Install AWS Load Balancer Controller
 ```bash
 # Associate IAM OIDC Provider
-eksctl utils associate-iam-oidc-provider --region=us-east-1 --cluster=magnite-eks-cluster --approve
+eksctl utils associate-iam-oidc-provider --region=eu-north-1 --cluster=eks-cluster --approve
 
 # Create IAM policy and Service Account for ALB Controller
 curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
 aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json
 
 eksctl create iamserviceaccount \
-  --cluster=magnite-eks-cluster \
+  --cluster=eks-cluster \
   --namespace=kube-system \
   --name=aws-load-balancer-controller \
   --role-name AmazonEKSLoadBalancerControllerRole \
@@ -240,7 +240,7 @@ helm repo add eks https://aws.github.io/eks-charts
 helm repo update
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   -n kube-system \
-  --set clusterName=magnite-eks-cluster \
+  --set clusterName=eks-cluster \
   --set serviceAccount.create=false \
   --set serviceAccount.name=aws-load-balancer-controller
 ```
@@ -361,7 +361,7 @@ ArgoCD will automatically:
 The solution provisions **AWS Application Load Balancers** via Kubernetes Ingress with ACM SSL termination.
 
 ### 1. Application Ingress (`app.cdec-engineer.store`)
-Configured in [`chart/templates/ingress.yaml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/chart/templates/ingress.yaml) and [`chart/values.yaml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/chart/values.yaml):
+Configured in [`chart/templates/ingress.yaml`](chart/templates/ingress.yaml) and [`chart/values.yaml`](chart/values.yaml):
 - **Class:** `alb`
 - **Scheme:** `internet-facing`
 - **Port:** HTTP (80) & HTTPS (443)
@@ -369,7 +369,7 @@ Configured in [`chart/templates/ingress.yaml`](file:///d:/Yash-sir-task/Magnite%
 - **Certificate:** Integrated with AWS Certificate Manager
 
 ### 2. ArgoCD Ingress (`argocd.cdec-engineer.store`)
-Configured in [`argocd/argocd-ingress.yaml`](file:///d:/Yash-sir-task/Magnite%20task/Python%20Application%20to%20AWS%20EKS%20using%20GitOps/aws-eks-gitops-pipeline/argocd/argocd-ingress.yaml):
+Configured in [`argocd/argocd-ingress.yaml`](argocd/argocd-ingress.yaml):
 - Provides secure TLS UI access for team operators at `https://argocd.cdec-engineer.store`.
 
 ### 3. DNS Records to Create
@@ -478,7 +478,7 @@ To completely eliminate EC2 worker node costs during off-hours:
 ```bash
 # Suspend EC2 Worker Nodes (Scale Node Group to 0)
 aws eks update-nodegroup-config \
-  --cluster-name magnite-eks-cluster \
+  --cluster-name eks-cluster \
   --nodegroup-name standard-workers \
   --scaling-config minSize=0,maxSize=0,desiredSize=0
 
@@ -491,9 +491,9 @@ kubectl annotate ingress aws-eks-gitops-pipeline -n hello-world-app \
 ```bash
 # Scale Node Group back up
 aws eks update-nodegroup-config \
-  --cluster-name magnite-eks-cluster \
+  --cluster-name eks-cluster \
   --nodegroup-name standard-workers \
-  --scaling-config minSize=1,maxSize=4,desiredSize=2
+  --scaling-config minSize=2,maxSize=4,desiredSize=2
 
 # Re-enable public traffic
 kubectl annotate ingress aws-eks-gitops-pipeline -n hello-world-app \
