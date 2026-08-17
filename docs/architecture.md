@@ -51,7 +51,7 @@ ArgoCD runs inside the EKS cluster. It continuously monitors the Git repository 
 ### 4. AWS EKS and Application Load Balancer
 - The application runs on EKS worker nodes.
 - An AWS Application Load Balancer (ALB) is provisioned via the `Ingress` resource.
-- The ALB acts as the entry point, terminating SSL/TLS for `cdec-engineer.store` and routing HTTP/HTTPS traffic to the application Pods.
+- The ALB acts as the entry point, terminating SSL/TLS for `app.cdec-engineer.store` (and `argocd.cdec-engineer.store` for ArgoCD) and routing HTTP/HTTPS traffic to the application Pods.
 - The Horizontal Pod Autoscaler (HPA) automatically scales the number of Pods based on CPU and memory utilization.
 
 ## Security Controls (DevSecOps)

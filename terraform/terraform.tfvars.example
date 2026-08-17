@@ -1,0 +1,22 @@
+# AWS Region
+aws_region = "us-east-1"
+
+# EKS Configuration
+cluster_name        = "magnite-eks-cluster"
+nodegroup_name      = "standard-workers"
+node_instance_types = ["t3.medium"]
+desired_nodes       = 2
+min_nodes           = 1
+max_nodes           = 4
+
+# ECR Configuration
+ecr_repo_name = "aws-eks-gitops-pipeline"
+
+# Domain Configuration
+domain_name = "cdec-engineer.store"
+
+# GitHub Repository for OIDC Authentication (format: "owner/repo")
+github_repo = "turkardiksha345-oss/aws-eks-gitops-pipeline"
+
+# VPC CIDR
+vpc_cidr = "10.0.0.0/16"

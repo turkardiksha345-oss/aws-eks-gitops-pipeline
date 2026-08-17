@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/aws-eks-gitops-pipeline
+  repository: 123456789012.dkr.ecr.eu-north-1.amazonaws.com/eks-cluster-app
   pullPolicy: IfNotPresent
   tag: "latest" # Overridden by CI/CD
 
@@ -41,7 +41,7 @@ ingress:
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT:certificate/CERTIFICATE_ID # To be updated with actual ARN
     alb.ingress.kubernetes.io/ssl-redirect: '443'
   hosts:
-    - host: cdec-engineer.store
+    - host: app.cdec-engineer.store
       paths:
         - path: /
           pathType: Prefix

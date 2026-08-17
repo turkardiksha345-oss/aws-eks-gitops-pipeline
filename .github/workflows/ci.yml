@@ -11,8 +11,10 @@ on:
       - 'README.md'
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: aws-eks-gitops-pipeline
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: eks-cluster-app
+  EKS_CLUSTER_NAME: eks-cluster
+  ARGOCD_APP_NAME: aws-eks-gitops-pipeline
   # Replace with actual IAM Role ARN for GitHub Actions OIDC
   AWS_ROLE_TO_ASSUME: arn:aws:iam::123456789012:role/github-actions-ecr-role 
   IMAGE_TAG: ${{ github.sha }}
@@ -123,3 +125,52 @@ jobs:
           git add chart/values.yaml
           git commit -m "chore: update image tag to ${{ env.IMAGE_TAG }} [skip ci]"
           git push
+
+  deploy-to-eks:
+    name: Continuous Deployment (CD) & EKS Sync
+    needs: update-manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      # DevSecOps / CD: Trigger Argo CD Sync via CLI (if secrets configured) or monitor EKS rollout
+      - name: Trigger ArgoCD Sync / Verify Deployment
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
+            echo "Installing ArgoCD CLI..."
+            curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+            chmod +x /usr/local/bin/argocd
+            
+            echo "Triggering automated sync on ArgoCD..."
+            argocd app sync ${{ env.ARGOCD_APP_NAME }} --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
+            
+            echo "Waiting for ArgoCD application to reach Healthy state..."
+            argocd app wait ${{ env.ARGOCD_APP_NAME }} --sync --health --timeout 300 --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
+          else
+            echo "ARGOCD_SERVER or ARGOCD_AUTH_TOKEN secret not set."
+            echo "Watching deployment rollout status directly on EKS..."
+            kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
+          fi
+
+      - name: Verify Live Deployment Status
+        run: |
+          echo "=== Active Kubernetes Pods ==="
+          kubectl get pods -n hello-world-app -o wide || true
+          echo "=== Active Services ==="
+          kubectl get svc -n hello-world-app || true
+          echo "=== Active Ingress Endpoints ==="
+          kubectl get ingress -n hello-world-app || true
