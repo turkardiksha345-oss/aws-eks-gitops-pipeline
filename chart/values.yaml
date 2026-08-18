@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   repository: 123456789012.dkr.ecr.eu-north-1.amazonaws.com/eks-cluster-app
   pullPolicy: IfNotPresent
-  tag: "latest" # Overridden by CI/CD
+  tag: "125cfe303f951dc520c27ac67329b5de87346d07"
 
 imagePullSecrets: []
 nameOverride: ""
