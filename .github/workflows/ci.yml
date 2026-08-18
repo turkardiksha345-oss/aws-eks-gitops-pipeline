@@ -181,8 +181,8 @@ jobs:
       - name: Verify Live Deployment Status
         run: |
           echo "=== Active Kubernetes Pods ==="
-          kubectl get pods -n hello-world-app -o wide || true
+          kubectl get pods -n hello-world-app -o wide 
           echo "=== Active Services ==="
-          kubectl get svc -n hello-world-app || true
-          echo "=== Active Ingress Endpoints ==="
-          kubectl get ingress -n hello-world-app || true
+          kubectl get svc -n hello-world-app 
+          echo "=== Active Ingress Endpoints ===" 
+          kubectl get ingress -n hello-world-app 

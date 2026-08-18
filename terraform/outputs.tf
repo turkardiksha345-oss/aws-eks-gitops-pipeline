@@ -29,7 +29,7 @@ output "ecr_repository_url" {
 
 output "acm_certificate_arn" {
   description = "ACM SSL Certificate ARN (Use in chart/values.yaml and argocd/argocd-ingress.yaml)"
-  value       = aws_acm_certificate.cert.arn
+  value       = aws_acm_certificate_validation.cert.certificate_arn
 }
 
 output "acm_dns_validation_records" {
