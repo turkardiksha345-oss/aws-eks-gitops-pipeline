@@ -1,13 +1,13 @@
 variable "aws_region" {
   description = "AWS region for all resources"
   type        = string
-  default     = "us-east-1"
+  default     = "eu-north-1"
 }
 
 variable "cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
-  default     = "eks-cluster"
+  default     = "my-kubernetes-cluster"
 }
 
 variable "nodegroup_name" {
@@ -19,7 +19,7 @@ variable "nodegroup_name" {
 variable "node_instance_types" {
   description = "Instance types for EKS worker nodes"
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t3.small"]
 }
 
 variable "desired_nodes" {
@@ -31,7 +31,7 @@ variable "desired_nodes" {
 variable "min_nodes" {
   description = "Minimum number of worker nodes"
   type        = number
-  default     = 1
+  default     = 2
 }
 
 variable "max_nodes" {
@@ -43,7 +43,7 @@ variable "max_nodes" {
 variable "ecr_repo_name" {
   description = "Name of the Amazon ECR repository"
   type        = string
-  default     = "aws-eks-gitops-pipeline"
+  default     = "eks-cluster-app"
 }
 
 variable "domain_name" {

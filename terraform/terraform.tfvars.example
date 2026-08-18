@@ -2,10 +2,10 @@
 aws_region = "eu-north-1"
 
 # EKS Configuration
-cluster_name        = "eks-cluster"
+cluster_name        = "my-kubernetes-cluster"
 nodegroup_name      = "standard-workers"
-node_instance_types = ["t3.medium"]
-desired_nodes       = 2
+node_instance_types = ["t3.small"]
+desired_nodes       = 2 
 min_nodes           = 2
 max_nodes           = 4
 
