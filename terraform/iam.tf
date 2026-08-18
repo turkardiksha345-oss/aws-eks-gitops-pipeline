@@ -2,6 +2,11 @@
 # 1. GitHub Actions IAM Role (for ECR Push via existing OIDC Provider)
 # ==============================================================================
 
+# Data source to fetch the existing GitHub Actions OIDC Provider
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
 # IAM Role assumed by GitHub Actions CI/CD Pipeline
 resource "aws_iam_role" "github_actions" {
   name = "github-actions-ecr-role"
@@ -12,7 +17,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = "arn:aws:iam://${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+          Federated = data.aws_iam_openid_connect_provider.github.arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
