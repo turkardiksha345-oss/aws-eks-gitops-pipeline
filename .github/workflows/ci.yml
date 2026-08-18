@@ -16,6 +16,7 @@ env:
   EKS_CLUSTER_NAME: my-kubernetes-cluster
   ARGOCD_APP_NAME: aws-eks-gitops-pipeline
   AWS_ROLE_TO_ASSUME: arn:aws:iam::755729228993:role/github-actions-ecr-role
+  ALB_CONTROLLER_ROLE_ARN: arn:aws:iam::755729228993:role/AmazonEKSLoadBalancerControllerRole
   IMAGE_TAG: ${{ github.sha }}
 
 permissions:
@@ -155,6 +156,27 @@ jobs:
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Install and Setup AWS Load Balancer Controller
+        run: |
+          echo "Installing Helm CLI..."
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+          echo "Applying AWS Load Balancer Controller CRDs..."
+          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" || true
+
+          echo "Adding EKS Helm Chart repository..."
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+          echo "Installing/Upgrading AWS Load Balancer Controller..."
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=${{ env.EKS_CLUSTER_NAME }} \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ env.ALB_CONTROLLER_ROLE_ARN }} \
+            --wait --timeout=180s
 
       # DevSecOps / CD: Trigger Argo CD Sync via CLI (if secrets configured) or monitor EKS rollout
       - name: Trigger ArgoCD Sync / Verify Deployment

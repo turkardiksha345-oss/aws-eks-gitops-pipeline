@@ -9,7 +9,7 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/backend-protocol: HTTPS
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/EXAMPLE-CERT-ID # Replace with ACM Certificate ARN for *.cdec-engineer.store or argocd.cdec-engineer.store
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-north-1:755729228993:certificate/40c245ea-6923-4f80-8487-69a6865f7ab5
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTPS

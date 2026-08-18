@@ -43,6 +43,31 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }
 
+# Allow GitHub Actions to describe and list EKS cluster
+resource "aws_iam_policy" "github_actions_eks" {
+  name        = "github-actions-eks-policy"
+  description = "Permissions for GitHub Actions to access EKS Cluster"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_eks" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_eks.arn
+}
+
 # ==============================================================================
 # 2. AWS Load Balancer Controller IAM Policy & Service Account Role
 # ==============================================================================

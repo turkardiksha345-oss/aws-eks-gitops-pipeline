@@ -136,3 +136,23 @@ resource "aws_iam_openid_connect_provider" "eks" {
     Name = "${var.cluster_name}-oidc-provider"
   }
 }
+
+# ==============================================================================
+# 6. EKS Access Entry for GitHub Actions CI/CD Pipeline
+# ==============================================================================
+resource "aws_eks_access_entry" "github_actions" {
+  cluster_name  = aws_eks_cluster.main.name
+  principal_arn = aws_iam_role.github_actions.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "github_actions" {
+  cluster_name  = aws_eks_cluster.main.name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_iam_role.github_actions.arn
+
+  access_scope {
+    type = "cluster"
+  }
+}
+
