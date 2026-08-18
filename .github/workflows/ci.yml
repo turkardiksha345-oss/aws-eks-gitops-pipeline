@@ -13,7 +13,7 @@ on:
 env:
   AWS_REGION: eu-north-1
   ECR_REPOSITORY: eks-cluster-app
-  EKS_CLUSTER_NAME: eks-cluster
+  EKS_CLUSTER_NAME: my-kubernetes-cluster
   ARGOCD_APP_NAME: aws-eks-gitops-pipeline
   AWS_ROLE_TO_ASSUME: arn:aws:iam::755729228993:role/github-actions-ecr-role
   IMAGE_TAG: ${{ github.sha }}
