@@ -15,8 +15,7 @@ env:
   ECR_REPOSITORY: eks-cluster-app
   EKS_CLUSTER_NAME: eks-cluster
   ARGOCD_APP_NAME: aws-eks-gitops-pipeline
-  # Replace with actual IAM Role ARN for GitHub Actions OIDC
-  AWS_ROLE_TO_ASSUME: arn:aws:iam::123456789012:role/github-actions-ecr-role 
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::755729228993:role/github-actions-ecr-role
   IMAGE_TAG: ${{ github.sha }}
 
 permissions:

@@ -1,22 +1,6 @@
 # ==============================================================================
-# 1. GitHub Actions OIDC Provider & IAM Role (for ECR Push)
+# 1. GitHub Actions IAM Role (for ECR Push via existing OIDC Provider)
 # ==============================================================================
-
-# Data source for GitHub Actions OIDC certificate thumbprint
-data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com"
-}
-
-# Create GitHub OIDC Provider if it does not already exist
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
-
-  tags = {
-    Name = "github-actions-oidc"
-  }
-}
 
 # IAM Role assumed by GitHub Actions CI/CD Pipeline
 resource "aws_iam_role" "github_actions" {
@@ -28,7 +12,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
+          Federated = "arn:aws:iam://${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
