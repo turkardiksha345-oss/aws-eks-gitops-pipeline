@@ -362,16 +362,29 @@ jobs:
               kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
             fi
 
+            echo "Installing / Verifying Argo CD in EKS..."
+            kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+            kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
             if [ -f "argocd/argocd-ingress.yaml" ]; then
               echo "Applying Argo CD Ingress (Shared ALB main-group)..."
-              kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
               kubectl apply -f argocd/argocd-ingress.yaml || true
             fi
+
+            echo "Waiting for Argo CD Server to start..."
+            kubectl rollout status deployment/argocd-server -n argocd --timeout=120s || true
+
+            ARGOCD_ADMIN_PWD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d || echo "admin")
 
             echo "============================================================"
             echo "🚀 ACTIVE KUBERNETES PODS & STATUS"
             echo "============================================================"
             kubectl get pods -n hello-world-app -o wide
+            echo ""
+            echo "============================================================"
+            echo "🐙 ARGO CD PODS & STATUS"
+            echo "============================================================"
+            kubectl get pods -n argocd -o wide
             echo ""
             echo "============================================================"
             echo "📊 DEPLOYMENT ROLLOUT STATUS"
@@ -381,7 +394,7 @@ jobs:
             echo "============================================================"
             echo "🌐 ACTIVE INGRESS & APPLICATION URLS"
             echo "============================================================"
-            kubectl get ingress -n hello-world-app
+            kubectl get ingress -A
             echo ""
 
             # Post deployment summary directly to GitHub Actions UI
@@ -393,14 +406,21 @@ jobs:
             echo "| **AWS Region** | \`${{ env.AWS_REGION }}\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **Image Tag** | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
             echo "| **Application URL** | [https://cdec-engineer.store](https://cdec-engineer.store) |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Argo CD URL** | [https://argocd.cdec-engineer.store](https://argocd.cdec-engineer.store) |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Argo CD Username** | \`admin\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Argo CD Password** | \`${ARGOCD_ADMIN_PWD}\` |" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🟢 Active Pods" >> $GITHUB_STEP_SUMMARY
+            echo "### 🟢 Application Pods" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
             kubectl get pods -n hello-world-app -o wide >> $GITHUB_STEP_SUMMARY 2>&1 || true
             echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "### 🐙 Argo CD Pods" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            kubectl get pods -n argocd -o wide >> $GITHUB_STEP_SUMMARY 2>&1 || true
+            echo '```' >> $GITHUB_STEP_SUMMARY
             echo "### 🌐 Ingress Endpoints" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
-            kubectl get ingress -n hello-world-app >> $GITHUB_STEP_SUMMARY 2>&1 || true
+            kubectl get ingress -A >> $GITHUB_STEP_SUMMARY 2>&1 || true
             echo '```' >> $GITHUB_STEP_SUMMARY
           else
             echo "🔒 EKS Cluster API is in Private Mode (no public endpoint)."
