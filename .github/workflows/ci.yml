@@ -307,7 +307,7 @@ jobs:
             curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
             echo "Applying AWS Load Balancer Controller CRDs..."
-            kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" 
+            kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/helm/aws-load-balancer-controller/crds/crds.yaml
 
             echo "Adding EKS Helm Chart repository..."
             helm repo add eks https://aws.github.io/eks-charts
@@ -321,6 +321,7 @@ jobs:
               --set serviceAccount.create=true \
               --set serviceAccount.name=aws-load-balancer-controller \
               --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${ALB_ROLE_ARN} \
+              --set region=${{ env.AWS_REGION }} \
               --wait --timeout=180s
 
             if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
@@ -334,6 +335,8 @@ jobs:
               echo "Waiting for ArgoCD application to reach Healthy state..."
               argocd app wait ${{ env.ARGOCD_APP_NAME }} --sync --health --timeout 300 --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
             else
+              echo "Deploying application Helm chart directly to EKS..."
+              helm upgrade --install ${{ env.ARGOCD_APP_NAME }} ./chart -n hello-world-app --create-namespace
               echo "Watching deployment rollout status directly on EKS..."
               kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
             fi
