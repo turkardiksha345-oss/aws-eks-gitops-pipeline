@@ -9,7 +9,7 @@ data "aws_iam_openid_connect_provider" "github" {
 
 # IAM Role assumed by GitHub Actions CI/CD Pipeline
 resource "aws_iam_role" "github_actions" {
-  name = "github-actions-ecr-role"
+  name = "${var.cluster_name}-github-actions-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -33,7 +33,7 @@ resource "aws_iam_role" "github_actions" {
   })
 
   tags = {
-    Name = "github-actions-ecr-role"
+    Name = "${var.cluster_name}-github-actions-role"
   }
 }
 
@@ -45,7 +45,7 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
 
 # Allow GitHub Actions to describe and list EKS cluster
 resource "aws_iam_policy" "github_actions_eks" {
-  name        = "github-actions-eks-policy"
+  name        = "${var.cluster_name}-github-actions-eks-policy"
   description = "Permissions for GitHub Actions to access EKS Cluster"
 
   policy = jsonencode({
@@ -78,18 +78,18 @@ data "http" "aws_lb_controller_policy" {
 }
 
 resource "aws_iam_policy" "aws_lb_controller" {
-  name        = "AWSLoadBalancerControllerIAMPolicy"
+  name        = "${var.cluster_name}-AWSLoadBalancerControllerIAMPolicy"
   description = "IAM Policy for AWS Load Balancer Controller on EKS"
   policy      = data.http.aws_lb_controller_policy.response_body
 
   tags = {
-    Name = "AWSLoadBalancerControllerIAMPolicy"
+    Name = "${var.cluster_name}-AWSLoadBalancerControllerIAMPolicy"
   }
 }
 
 # IAM Role for AWS Load Balancer Controller (Service Account in kube-system)
 resource "aws_iam_role" "aws_lb_controller" {
-  name = "AmazonEKSLoadBalancerControllerRole"
+  name = "${var.cluster_name}-AmazonEKSLoadBalancerControllerRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -111,7 +111,7 @@ resource "aws_iam_role" "aws_lb_controller" {
   })
 
   tags = {
-    Name = "AmazonEKSLoadBalancerControllerRole"
+    Name = "${var.cluster_name}-AmazonEKSLoadBalancerControllerRole"
   }
 }
 
