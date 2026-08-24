@@ -1,5 +1,5 @@
+import secrets
 from flask import Flask, render_template
-import random
 
 app = Flask(__name__)
 
@@ -15,7 +15,7 @@ QUOTES = [
 
 @app.route("/")
 def home():
-    quote = random.choice(QUOTES)
+    quote = secrets.choice(QUOTES)
     return render_template("index.html", quote=quote)
     
 @app.route("/health")
@@ -28,4 +28,4 @@ def info():
 
 if __name__ == "__main__":
     # Run the app, listening on all interfaces so it works in a container
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8000)  # nosec B104
