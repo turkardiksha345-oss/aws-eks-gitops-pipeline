@@ -368,9 +368,14 @@ jobs:
 
             if [ -f "argocd/argocd-ingress.yaml" ]; then
               echo "Applying Argo CD Ingress (Shared ALB main-group)..."
-              kubectl apply -f argocd/argocd-ingress.yaml || true
+              kubectl apply -f argocd/argocd-ingress.yaml --server-side --force-conflicts
             fi
 
+            if [ -f "argocd/application.yaml" ]; then
+              echo "Registering GitOps Application in Argo CD..."
+              kubectl apply -f argocd/application.yaml || true
+            fi
+  
             echo "Waiting for Argo CD Server to start..."
             kubectl rollout status deployment/argocd-server -n argocd --timeout=120s || true
 
