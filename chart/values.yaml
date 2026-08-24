@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   repository: 755729228993.dkr.ecr.eu-north-1.amazonaws.com/eks-cluster-app
   pullPolicy: IfNotPresent
-  tag: "99532346024132d02a72103766e2318714b941de"
+  tag: "d7178c1fc4c81d432255cb86f3617437c9c1b37b"
 
 imagePullSecrets: []
 nameOverride: ""
