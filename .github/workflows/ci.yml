@@ -362,6 +362,12 @@ jobs:
               kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
             fi
 
+            if [ -f "argocd/argocd-ingress.yaml" ]; then
+              echo "Applying Argo CD Ingress (Shared ALB main-group)..."
+              kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+              kubectl apply -f argocd/argocd-ingress.yaml || true
+            fi
+
             echo "============================================================"
             echo "🚀 ACTIVE KUBERNETES PODS & STATUS"
             echo "============================================================"
