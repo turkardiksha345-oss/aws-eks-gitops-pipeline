@@ -181,9 +181,11 @@ jobs:
           bandit -r app/ -v
 
       - name: Run Unit Tests with pytest
+        env:
+          PYTHONPATH: .
         run: |
           echo "=== Running Python Unit Tests & Coverage ==="
-          pytest -v --cov=app --cov-report=term-missing tests/
+          python -m pytest -v --cov=app --cov-report=term-missing tests/
 
       - name: SonarCloud Scan
         if: env.SONAR_TOKEN != ''
