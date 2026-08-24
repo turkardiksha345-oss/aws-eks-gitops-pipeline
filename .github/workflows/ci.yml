@@ -326,12 +326,9 @@ jobs:
               --set region=${{ env.AWS_REGION }} \
               --set vpcId=${VPC_ID}
 
-            echo "Waiting for AWS Load Balancer Controller to be ready..."
-            kubectl rollout status deployment/aws-load-balancer-controller -n kube-system --timeout=90s || true
-            # Clean up any stale webhooks from previous controller revisions to prevent x509 cert errors
-            kubectl delete validatingwebhookconfiguration vingress.elbv2.k8s.aws vtargetgroupbinding.elbv2.k8s.aws --ignore-not-found=true
-            kubectl delete mutatingwebhookconfiguration melbv2.k8s.aws --ignore-not-found=true
-            sleep 10
+            echo "Removing any validating webhook blocks before deploying application..."
+            kubectl delete validatingwebhookconfiguration vingress.elbv2.k8s.aws vtargetgroupbinding.elbv2.k8s.aws --ignore-not-found=true || true
+            kubectl delete mutatingwebhookconfiguration melbv2.k8s.aws --ignore-not-found=true || true
 
             if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
               echo "Installing ArgoCD CLI..."
