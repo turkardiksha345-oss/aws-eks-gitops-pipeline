@@ -13,13 +13,20 @@ resource "aws_acm_certificate" "cert" {
   }
 }
 
-# Fetch the existing Route 53 Hosted Zone
-data "aws_route53_zone" "primary" {
-  name         = var.domain_name
-  private_zone = false
+# ==============================================================================
+# Route 53 Public Hosted Zone for Domain
+# ==============================================================================
+resource "aws_route53_zone" "primary" {
+  name          = var.domain_name
+  comment       = "Managed Public Hosted Zone for ${var.domain_name}"
+  force_destroy = false
+
+  tags = {
+    Name = "${var.domain_name}-hosted-zone"
+  }
 }
 
-# Automatically create DNS validation records in Route 53
+# Automatically create DNS validation records in the Route 53 Hosted Zone
 resource "aws_route53_record" "cert_validation" {
   for_each = {
     for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
@@ -34,7 +41,7 @@ resource "aws_route53_record" "cert_validation" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = data.aws_route53_zone.primary.zone_id
+  zone_id         = aws_route53_zone.primary.zone_id
 }
 
 # Wait for the ACM certificate validation to complete

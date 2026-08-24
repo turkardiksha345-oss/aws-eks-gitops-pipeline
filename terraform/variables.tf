@@ -63,3 +63,21 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
+variable "cluster_endpoint_public_access" {
+  description = "Indicates whether the Amazon EKS public API server endpoint is enabled (false = fully private cluster)"
+  type        = bool
+  default     = false
+}
+
+variable "cluster_endpoint_private_access" {
+  description = "Indicates whether the Amazon EKS private API server endpoint is enabled"
+  type        = bool
+  default     = true
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  description = "List of CIDR blocks allowed to access the EKS API endpoint if public access is enabled"
+  type        = list(string)
+  default     = []
+}

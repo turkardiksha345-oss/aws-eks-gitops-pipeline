@@ -41,6 +41,14 @@ ingress:
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-north-1:755729228993:certificate/40c245ea-6923-4f80-8487-69a6865f7ab5
     alb.ingress.kubernetes.io/ssl-redirect: '443'
   hosts:
+    - host: cdec-engineer.store
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: www.cdec-engineer.store
+      paths:
+        - path: /
+          pathType: Prefix
     - host: app.cdec-engineer.store
       paths:
         - path: /

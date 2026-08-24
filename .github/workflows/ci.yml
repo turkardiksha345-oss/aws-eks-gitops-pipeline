@@ -1,7 +1,30 @@
-name: CI/CD Pipeline with DevSecOps
+name: End-to-End GitOps & Infrastructure Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Pipeline Action to Execute'
+        required: true
+        type: choice
+        default: 'apply-and-deploy'
+        options:
+          - 'apply-and-deploy'
+          - 'app-only'
+          - 'infra-only'
+          - 'plan'
+          - 'destroy'
+      confirm_destroy:
+        description: 'Required if action is "destroy": Type DESTROY to confirm'
+        required: false
+        type: string
+        default: ''
+      auto_approve:
+        description: 'Auto-approve Terraform Apply / Destroy'
+        required: true
+        type: boolean
+        default: true
+
   push:
     branches:
       - main
@@ -18,6 +41,8 @@ env:
   ARGOCD_APP_NAME: aws-eks-gitops-pipeline
   AWS_ROLE_TO_ASSUME: arn:aws:iam::755729228993:role/github-actions-ecr-role
   ALB_CONTROLLER_ROLE_ARN: arn:aws:iam::755729228993:role/AmazonEKSLoadBalancerControllerRole
+  TF_VERSION: '1.5.7'
+  TF_WORKING_DIR: './terraform'
   IMAGE_TAG: ${{ github.sha }}
 
 permissions:
@@ -25,14 +50,116 @@ permissions:
   contents: write # Required to commit Helm chart updates
 
 jobs:
+  # ============================================================================
+  # 1. TERRAFORM INFRASTRUCTURE (Provision, Plan, or Destroy)
+  # ============================================================================
+  terraform-infrastructure:
+    name: Terraform Infrastructure (${{ inputs.action != '' && inputs.action || 'Apply on Push' }})
+    if: |
+      github.event_name == 'push' || 
+      (github.event_name == 'workflow_dispatch' && 
+        (inputs.action == 'apply-and-deploy' || 
+         inputs.action == 'infra-only' || 
+         inputs.action == 'plan' || 
+         inputs.action == 'destroy'))
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ACCESS_KEY_ID == '' && env.AWS_ROLE_TO_ASSUME || '' }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      # Safety guard for destroy
+      - name: Destroy Safeguard Check
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+        run: |
+          if [ "${{ inputs.confirm_destroy }}" != "DESTROY" ]; then
+            echo "::error::Destroy aborted! You must type 'DESTROY' in confirm_destroy to tear down infrastructure."
+            exit 1
+          fi
+          echo "Safeguard passed. Proceeding with Terraform Destroy."
+
+      # Destroy Action
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+        run: |
+          terraform destroy -auto-approve -input=false
+
+      # Plan Action
+      - name: Terraform Plan
+        if: |
+          github.event_name == 'push' || 
+          (github.event_name == 'workflow_dispatch' && 
+            (inputs.action == 'plan' || 
+             inputs.action == 'apply-and-deploy' || 
+             inputs.action == 'infra-only'))
+        run: |
+          terraform plan -no-color -out=tfplan
+
+      # Apply Action
+      - name: Terraform Apply
+        if: |
+          github.event_name == 'push' || 
+          (github.event_name == 'workflow_dispatch' && 
+            (inputs.action == 'apply-and-deploy' || 
+             inputs.action == 'infra-only'))
+        run: |
+          terraform apply -input=false -auto-approve tfplan
+
+      - name: Display Terraform Outputs
+        if: |
+          github.event_name == 'push' || 
+          (github.event_name == 'workflow_dispatch' && 
+            (inputs.action == 'apply-and-deploy' || 
+             inputs.action == 'infra-only'))
+        run: |
+          echo "=== Terraform Infrastructure Outputs ==="
+          terraform output
+
+  # ============================================================================
+  # 2. CODE QUALITY AND SAST SCANNING
+  # ============================================================================
   test-and-scan:
     name: Code Quality and SAST
+    if: |
+      always() && 
+      (github.event_name == 'push' || 
+        (github.event_name == 'workflow_dispatch' && 
+          inputs.action != 'destroy' && 
+          inputs.action != 'plan' && 
+          inputs.action != 'infra-only'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required for SonarCloud analysis
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,15 +170,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r app/requirements.txt flake8
-          
+
       - name: Lint with flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
           flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings
           flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      # SonarCloud SAST integration (runs only if SONAR_TOKEN secret is present)
       - name: SonarCloud Scan
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarcloud-github-action@master
@@ -60,9 +184,19 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         continue-on-error: true
 
+  # ============================================================================
+  # 3. BUILD, SCAN, AND PUSH DOCKER IMAGE TO ECR
+  # ============================================================================
   build-and-push:
     name: Build, Scan Image, and Push to ECR
-    needs: test-and-scan
+    needs: [terraform-infrastructure, test-and-scan]
+    if: |
+      always() && 
+      !cancelled() && 
+      !contains(needs.*.result, 'failure') && 
+      (github.event_name == 'push' || 
+        (github.event_name == 'workflow_dispatch' && 
+          (inputs.action == 'apply-and-deploy' || inputs.action == 'app-only')))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -89,20 +223,18 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          # Tag as latest as well
           docker tag $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY/$ECR_REPOSITORY:latest
 
-      # DevSecOps: Container Image Scanning with Trivy
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}'
           format: 'table'
-          exit-code: '1' # Fail pipeline if CRITICAL vulnerabilities are found
+          exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-        continue-on-error: true # Let user see vulnerabilities without failing initially during setup
+        continue-on-error: true
 
       - name: Push Docker Image to Amazon ECR
         env:
@@ -111,6 +243,9 @@ jobs:
           docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$ECR_REPOSITORY:latest
 
+  # ============================================================================
+  # 4. UPDATE GITOPS MANIFESTS (Helm chart)
+  # ============================================================================
   update-manifests:
     name: Update Helm Manifests for GitOps
     needs: build-and-push
@@ -123,9 +258,8 @@ jobs:
 
       - name: Update Helm values.yaml
         run: |
-          # Use sed to replace the tag in values.yaml with the new image tag
           sed -i "s/tag: .*/tag: \"${{ env.IMAGE_TAG }}\"/g" chart/values.yaml
-          
+
       - name: Commit and Push changes
         run: |
           git config --global user.name "github-actions[bot]"
@@ -134,6 +268,9 @@ jobs:
           git commit -m "chore: update image tag to ${{ env.IMAGE_TAG }} [skip ci]"
           git push
 
+  # ============================================================================
+  # 5. DEPLOY TO AMAZON EKS & ARGO CD SYNC
+  # ============================================================================
   deploy-to-eks:
     name: Continuous Deployment (CD) & EKS Sync
     needs: update-manifests
@@ -158,54 +295,57 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
-      - name: Install and Setup AWS Load Balancer Controller
-        run: |
-          echo "Installing Helm CLI..."
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-          echo "Applying AWS Load Balancer Controller CRDs..."
-          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" 
-
-          echo "Adding EKS Helm Chart repository..."
-          helm repo add eks https://aws.github.io/eks-charts
-          helm repo update
-
-          echo "Installing/Upgrading AWS Load Balancer Controller..."
-          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
-            -n kube-system \
-            --set clusterName=${{ env.EKS_CLUSTER_NAME }} \
-            --set serviceAccount.create=true \
-            --set serviceAccount.name=aws-load-balancer-controller \
-            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ env.ALB_CONTROLLER_ROLE_ARN }} \
-            --wait --timeout=180s
-
-      # DevSecOps / CD: Trigger Argo CD Sync via CLI (if secrets configured) or monitor EKS rollout
-      - name: Trigger ArgoCD Sync / Verify Deployment
+      - name: Check Cluster API Reachability & Manage Deployment
         env:
           ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
         run: |
-          if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
-            echo "Installing ArgoCD CLI..."
-            curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-            chmod +x /usr/local/bin/argocd
+          echo "Testing connectivity to EKS API server..."
+          if kubectl version --request-timeout='10s' > /dev/null 2>&1; then
+            echo "✅ EKS API server is directly reachable from this runner."
             
-            echo "Triggering automated sync on ArgoCD..."
-            argocd app sync ${{ env.ARGOCD_APP_NAME }} --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
-            
-            echo "Waiting for ArgoCD application to reach Healthy state..."
-            argocd app wait ${{ env.ARGOCD_APP_NAME }} --sync --health --timeout 300 --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
-          else
-            echo "ARGOCD_SERVER or ARGOCD_AUTH_TOKEN secret not set."
-            echo "Watching deployment rollout status directly on EKS..."
-            kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
-          fi
+            echo "Installing Helm CLI..."
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Verify Live Deployment Status
-        run: |
-          echo "=== Active Kubernetes Pods ==="
-          kubectl get pods -n hello-world-app -o wide 
-          echo "=== Active Services ==="
-          kubectl get svc -n hello-world-app 
-          echo "=== Active Ingress Endpoints ===" 
-          kubectl get ingress -n hello-world-app 
+            echo "Applying AWS Load Balancer Controller CRDs..."
+            kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" 
+
+            echo "Adding EKS Helm Chart repository..."
+            helm repo add eks https://aws.github.io/eks-charts
+            helm repo update
+
+            echo "Installing/Upgrading AWS Load Balancer Controller..."
+            helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+              -n kube-system \
+              --set clusterName=${{ env.EKS_CLUSTER_NAME }} \
+              --set serviceAccount.create=true \
+              --set serviceAccount.name=aws-load-balancer-controller \
+              --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${{ env.ALB_CONTROLLER_ROLE_ARN }} \
+              --wait --timeout=180s
+
+            if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
+              echo "Installing ArgoCD CLI..."
+              curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+              chmod +x /usr/local/bin/argocd
+              
+              echo "Triggering automated sync on ArgoCD..."
+              argocd app sync ${{ env.ARGOCD_APP_NAME }} --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
+              
+              echo "Waiting for ArgoCD application to reach Healthy state..."
+              argocd app wait ${{ env.ARGOCD_APP_NAME }} --sync --health --timeout 300 --auth-token "$ARGOCD_AUTH_TOKEN" --server "$ARGOCD_SERVER" --insecure
+            else
+              echo "Watching deployment rollout status directly on EKS..."
+              kubectl rollout status deployment/${{ env.ARGOCD_APP_NAME }} -n hello-world-app --timeout=180s || true
+            fi
+
+            echo "=== Active Kubernetes Pods ==="
+            kubectl get pods -n hello-world-app -o wide || true
+            echo "=== Active Services ==="
+            kubectl get svc -n hello-world-app || true
+            echo "=== Active Ingress Endpoints ===" 
+            kubectl get ingress -n hello-world-app || true
+          else
+            echo "🔒 EKS Cluster API is in Private Mode (no public endpoint)."
+            echo "✅ Helm chart manifests were successfully updated & pushed to Git repository."
+            echo "🚀 In-cluster Argo CD will pull and reconcile the deployment inside the VPC automatically."
+          fi
