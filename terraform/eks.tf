@@ -39,7 +39,7 @@ resource "aws_eks_cluster" "main" {
     subnet_ids              = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
     endpoint_public_access  = var.cluster_endpoint_public_access
     endpoint_private_access = var.cluster_endpoint_private_access
-    public_access_cidrs     = var.cluster_endpoint_public_access ? (length(var.cluster_endpoint_public_access_cidrs) > 0 ? var.cluster_endpoint_public_access_cidrs : ["51.20.142.84/32"]) : null
+    public_access_cidrs     = var.cluster_endpoint_public_access ? (length(var.cluster_endpoint_public_access_cidrs) > 0 ? var.cluster_endpoint_public_access_cidrs : ["0.0.0.0/0"]) : null
   }
 
   access_config {
