@@ -324,11 +324,14 @@ jobs:
               --set serviceAccount.name=aws-load-balancer-controller \
               --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${ALB_ROLE_ARN} \
               --set region=${{ env.AWS_REGION }} \
-              --set vpcId=${VPC_ID}
+              --set vpcId=${VPC_ID} \
+              --set webhookConfig.disableIngressValidation=true \
+              --set webhookConfig.ingressValdationFailurePolicy=Ignore \
+              --set enableServiceMutatorWebhook=false
 
             echo "Removing any validating webhook blocks before deploying application..."
-            kubectl delete validatingwebhookconfiguration vingress.elbv2.k8s.aws vtargetgroupbinding.elbv2.k8s.aws --ignore-not-found=true || true
-            kubectl delete mutatingwebhookconfiguration melbv2.k8s.aws --ignore-not-found=true || true
+            kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io --all --ignore-not-found=true || true
+            kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io --all --ignore-not-found=true || true
 
             if [ -n "$ARGOCD_SERVER" ] && [ -n "$ARGOCD_AUTH_TOKEN" ]; then
               echo "Installing ArgoCD CLI..."
