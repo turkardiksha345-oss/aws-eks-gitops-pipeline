@@ -162,3 +162,16 @@ resource "aws_eks_access_policy_association" "github_actions" {
   }
 }
 
+# ==============================================================================
+# 7. Security Group Rule: Allow ALB Traffic from VPC to EKS Pods
+# ==============================================================================
+resource "aws_security_group_rule" "cluster_inbound_vpc" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "-1"
+  cidr_blocks       = [var.vpc_cidr]
+  security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+  description       = "Allow inbound traffic from VPC (ALB to worker pods)"
+}
+
