@@ -104,6 +104,43 @@ jobs:
           fi
           echo "Safeguard passed. Proceeding with Terraform Destroy."
 
+      # Pre-destroy cleanup for in-cluster managed AWS resources (ALBs, Target Groups & ECR)
+      - name: Pre-destroy Cleanup
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
+        run: |
+          echo "=== Step 1: Cleaning up in-cluster Load Balancers & Target Groups ==="
+          VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "null" ]; then
+            echo "Searching for ALBs in VPC: $VPC_ID"
+            ALB_ARNS=$(aws elbv2 describe-load-balancers --region ${{ env.AWS_REGION }} --query "LoadBalancers[?VpcId=='$VPC_ID'].LoadBalancerArn" --output text 2>/dev/null || echo "")
+            for arn in $ALB_ARNS; do
+              if [ -n "$arn" ] && [ "$arn" != "None" ]; then
+                echo "Deleting Load Balancer: $arn"
+                aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region ${{ env.AWS_REGION }} || true
+              fi
+            done
+            if [ -n "$ALB_ARNS" ] && [ "$ALB_ARNS" != "None" ]; then
+              echo "Waiting 30 seconds for ALB network interfaces and IP unmappings to clear..."
+              sleep 30
+            fi
+
+            TG_ARNS=$(aws elbv2 describe-target-groups --region ${{ env.AWS_REGION }} --query "TargetGroups[?VpcId=='$VPC_ID'].TargetGroupArn" --output text 2>/dev/null || echo "")
+            for tg in $TG_ARNS; do
+              if [ -n "$tg" ] && [ "$tg" != "None" ]; then
+                echo "Deleting Target Group: $tg"
+                aws elbv2 delete-target-group --target-group-arn "$tg" --region ${{ env.AWS_REGION }} || true
+              fi
+            done
+          fi
+
+          echo "=== Step 2: Purging ECR Images ==="
+          IMAGE_IDS=$(aws ecr list-images --region ${{ env.AWS_REGION }} --repository-name ${{ env.ECR_REPOSITORY }} --query 'imageIds[*]' --output json 2>/dev/null || echo "[]")
+          if [ "$IMAGE_IDS" != "[]" ] && [ -n "$IMAGE_IDS" ]; then
+            aws ecr batch-delete-image --region ${{ env.AWS_REGION }} --repository-name ${{ env.ECR_REPOSITORY }} --image-ids "$IMAGE_IDS" 2>/dev/null || true
+          fi
+
+          echo "Pre-destroy cleanup completed."
+
       # Destroy Action
       - name: Terraform Destroy
         if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'

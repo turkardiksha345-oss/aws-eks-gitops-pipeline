@@ -19,7 +19,7 @@ resource "aws_acm_certificate" "cert" {
 resource "aws_route53_zone" "primary" {
   name          = var.domain_name
   comment       = "Managed Public Hosted Zone for ${var.domain_name}"
-  force_destroy = false
+  force_destroy = true
 
   tags = {
     Name = "${var.domain_name}-hosted-zone"
