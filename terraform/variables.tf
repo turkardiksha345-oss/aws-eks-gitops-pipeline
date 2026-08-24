@@ -65,9 +65,9 @@ variable "vpc_cidr" {
 }
 
 variable "cluster_endpoint_public_access" {
-  description = "Indicates whether the Amazon EKS public API server endpoint is enabled (false = fully private cluster)"
+  description = "Indicates whether the Amazon EKS public API server endpoint is enabled (authenticated via AWS IAM)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cluster_endpoint_private_access" {

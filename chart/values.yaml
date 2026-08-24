@@ -38,7 +38,6 @@ ingress:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip 
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-north-1:755729228993:certificate/40c245ea-6923-4f80-8487-69a6865f7ab5
     alb.ingress.kubernetes.io/ssl-redirect: '443'
   hosts:
     - host: cdec-engineer.store
