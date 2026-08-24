@@ -364,7 +364,7 @@ jobs:
 
             echo "Installing / Verifying Argo CD in EKS..."
             kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-            kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+            kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side
 
             if [ -f "argocd/argocd-ingress.yaml" ]; then
               echo "Applying Argo CD Ingress (Shared ALB main-group)..."
