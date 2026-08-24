@@ -1,6 +1,7 @@
 name: CI/CD Pipeline with DevSecOps
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -163,7 +164,7 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
           echo "Applying AWS Load Balancer Controller CRDs..."
-          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" || true
+          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master" 
 
           echo "Adding EKS Helm Chart repository..."
           helm repo add eks https://aws.github.io/eks-charts

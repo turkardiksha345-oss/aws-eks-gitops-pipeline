@@ -62,8 +62,24 @@ terraform output alb_controller_role_arn
 
 ---
 
+## 🤖 CI/CD Pipeline Automation (GitHub Actions)
+
+This repository includes a dedicated GitHub Actions workflow (`.github/workflows/terraform.yml`) that can be triggered manually from the **Actions** tab on GitHub:
+
+### How to Run Terraform via GitHub Actions:
+1. Go to the **Actions** tab in the GitHub repository.
+2. Select **Terraform Infrastructure Pipeline** from the left sidebar.
+3. Click **Run workflow**:
+   - **Terraform Action**: Choose `apply`, `plan`, or `destroy`.
+   - **Auto-approve**: Checked by default (`true`).
+   - **Required if action is "destroy"**: Type `DESTROY` to confirm when selecting the `destroy` action.
+4. Click the green **Run workflow** button.
+
+---
+
 ## 🧹 Teardown
-To destroy all created AWS resources:
+To destroy all created AWS resources locally:
 ```bash
 terraform destroy -auto-approve
 ```
+Or use the GitHub Actions workflow and select `destroy` with confirmation `DESTROY`.

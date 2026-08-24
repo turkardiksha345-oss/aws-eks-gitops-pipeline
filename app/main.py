@@ -17,10 +17,14 @@ QUOTES = [
 def home():
     quote = random.choice(QUOTES)
     return render_template("index.html", quote=quote)
-
+    
 @app.route("/health")
 def health():
     return {"status": "healthy"}, 200
+
+@app.route("/info")
+def info():
+    return {"app": "aws-eks-gitops-pipeline", "version": "1.0.0"}, 200
 
 if __name__ == "__main__":
     # Run the app, listening on all interfaces so it works in a container
