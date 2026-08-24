@@ -6,7 +6,6 @@ app = Flask(__name__)
 QUOTES = [
     {"text": "The only way to do great work is to love what you do.", "author": "Steve Jobs"},
     {"text": "Innovation distinguishes between a leader and a follower.", "author": "Steve Jobs"},
-    {"text": "Stay hungry, stay foolish.", "author": "Steve Jobs"},
     {"text": "The future belongs to those who believe in the beauty of their dreams.", "author": "Eleanor Roosevelt"},
     {"text": "It does not matter how slowly you go as long as you do not stop.", "author": "Confucius"},
     {"text": "Everything you can imagine is real.", "author": "Pablo Picasso"},
@@ -23,7 +22,6 @@ QUOTES = [
     {"text": "Hardships often prepare ordinary people for an extraordinary destiny.", "author": "C. S. Lewis"},
     {"text": "If you can dream it, you can do it.", "author": "Walt Disney"},
     {"text": "Do not wait for opportunity. Create it.", "author": "George Bernard Shaw"},
-    {"text": "Stay hungry, stay foolish.", "author": "Steve Jobs"},
     {"text": "The journey of a thousand miles begins with one step.", "author": "Lao Tzu"},
     {"text": "What you think, you become. What you feel, you attract. What you imagine, you create.", "author": "Buddha"},
     {"text": "Success usually comes to those who are too busy to be looking for it.", "author": "Henry David Thoreau"},
